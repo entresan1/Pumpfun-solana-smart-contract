@@ -8,18 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { formatLamportsToSol, formatTokenAmount } from "@/lib/format"
 import { getPoolPDA, getUserPositionPDA } from "@/lib/pdas"
-import { fetchPool, fetchUserPosition, LiquidityPool, UserPosition } from "@/lib/solana"
-import { MOCK_POOL_STATS } from "@/lib/mock-data"
-import { TrendingDown, TrendingUp, Wallet, Info, AlertTriangle } from "lucide-react"
+import { fetchPool, fetchUserPosition, LiquidityPool, UserPosition, calculateSellOutput } from "@/lib/solana"
+import { TrendingDown, TrendingUp, Wallet, Info, AlertTriangle, RefreshCw } from "lucide-react"
 
 interface PositionCardProps {
   mint: PublicKey | null
-}
-
-// Mock position for demo
-const MOCK_POSITION = {
-  totalTokens: 2500000, // 2.5M tokens
-  totalSol: 0.065 * LAMPORTS_PER_SOL, // 0.065 SOL spent
 }
 
 export function PositionCard({ mint }: PositionCardProps) {
@@ -51,7 +44,7 @@ export function PositionCard({ mint }: PositionCardProps) {
       setPool(poolData)
       setPosition(positionData)
     } catch {
-      // Silent fail - will use mock
+      // Silent fail
     } finally {
       setIsLoading(false)
     }
@@ -63,14 +56,22 @@ export function PositionCard({ mint }: PositionCardProps) {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  // Use mock position if no real position
-  const totalTokens = position?.totalTokens.toNumber() || (connected ? MOCK_POSITION.totalTokens : 0)
-  const totalSol = position?.totalSol.toNumber() || (connected ? MOCK_POSITION.totalSol : 0)
+  // Calculate values from real data only
+  const totalTokens = position?.totalTokens.toNumber() || 0
+  const totalSol = position?.totalSol.toNumber() || 0
   
-  // Calculate values
+  // Calculate current value based on pool reserves
+  let currentValue = 0
+  if (pool && totalTokens > 0) {
+    currentValue = calculateSellOutput(
+      totalTokens,
+      pool.reserveOne.toNumber(),
+      pool.reserveTwo.toNumber(),
+      1 // 1% fee
+    )
+  }
+  
   const avgCostPerToken = totalTokens > 0 ? totalSol / totalTokens : 0
-  const currentPricePerToken = MOCK_POOL_STATS.price * LAMPORTS_PER_SOL
-  const currentValue = totalTokens * currentPricePerToken
   const pnl = currentValue - totalSol
   const pnlPercent = totalSol > 0 ? (pnl / totalSol) * 100 : 0
   const isProfit = pnl >= 0
@@ -116,19 +117,23 @@ export function PositionCard({ mint }: PositionCardProps) {
                 <CardDescription>On-curve cost basis tracking</CardDescription>
               </div>
             </div>
-            <Badge variant={isProfit ? "secondary" : "penalty"}>
-              {isProfit ? "IN PROFIT" : "AT LOSS"}
-            </Badge>
+            {totalTokens > 0 && (
+              <Badge variant={isProfit ? "secondary" : "penalty"}>
+                {isProfit ? "IN PROFIT" : "AT LOSS"}
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
           {isLoading ? (
-            <div className="space-y-3">
-              <div className="h-4 bg-[#2A3338] rounded w-3/4 animate-pulse"></div>
-              <div className="h-4 bg-[#2A3338] rounded w-1/2 animate-pulse"></div>
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-5 h-5 text-[#5F6A6E] animate-spin" />
             </div>
           ) : totalTokens === 0 ? (
-            <div className="text-center py-6 space-y-3">
+            <div className="text-center py-8 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-[#0E1518] border border-[#2A3338] flex items-center justify-center mx-auto">
+                <Wallet className="w-5 h-5 text-[#5F6A6E]" />
+              </div>
               <p className="text-[#5F6A6E] text-sm">No position yet</p>
               <p className="text-xs text-[#5F6A6E]">Buy tokens to establish your position</p>
             </div>

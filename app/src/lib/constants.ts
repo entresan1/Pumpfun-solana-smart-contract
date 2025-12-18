@@ -7,7 +7,7 @@ export const PROGRAM_ID = new PublicKey("GyukgDYugNtzHiEdRroSiU5iFTCDJ1geAF2ekP6
 export const TOKEN_MINT = new PublicKey("ydDccyq66xKtfqn5bsRpfFXz4WeF4fh3bgQBx1npump");
 
 // Dev/Treasury wallet
-export const TREASURY_WALLET = new PublicKey("x4Cu1KF26LgDoGsEajF6mV6ERCg4iBncrSSHvza7xEN");
+export const TREASURY_WALLET = new PublicKey("9zyRwPZBave48GLKRjdVfX6r725LfXR7dmzqwdBhKf5E");
 
 // Seeds for PDAs
 export const CURVE_CONFIG_SEED = "CurveConfiguration";

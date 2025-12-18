@@ -119,26 +119,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-[#141D21] border border-[#2A3338] text-center">
-              <span className="text-2xl font-medium text-[#E9E1D8] text-value">847</span>
-              <span className="text-xs text-[#5F6A6E] block mt-1">Holders</span>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141D21] border border-[#2A3338] text-center">
-              <span className="text-2xl font-medium text-[#E9E1D8] text-value">2,341</span>
-              <span className="text-xs text-[#5F6A6E] block mt-1">24h Transactions</span>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141D21] border border-[#2A3338] text-center">
-              <span className="text-2xl font-medium text-[#8C3A32] text-value">1,847</span>
-              <span className="text-xs text-[#5F6A6E] block mt-1">Paper Hands Taxed</span>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141D21] border border-[#2A3338] text-center">
-              <span className="text-2xl font-medium text-[#E9E1D8] text-value">127.45</span>
-              <span className="text-xs text-[#5F6A6E] block mt-1">SOL Collected</span>
-            </div>
-          </div>
-
           {/* Footer */}
           <footer className="mt-16 pt-8 border-t border-[#2A3338]">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -149,7 +129,7 @@ export default function Home() {
                 <span className="w-px h-3 bg-[#2A3338]" />
                 <a href="#" className="hover:text-[#9FA6A3] transition-colors">Docs</a>
                 <span className="w-px h-3 bg-[#2A3338]" />
-                <a href="#" className="hover:text-[#9FA6A3] transition-colors">GitHub</a>
+                <a href="https://github.com/entresan1/Pumpfun-solana-smart-contract" target="_blank" rel="noopener noreferrer" className="hover:text-[#9FA6A3] transition-colors">GitHub</a>
               </div>
               <p className="text-xs text-[#5F6A6E]">
                 Not financial advice. DYOR.

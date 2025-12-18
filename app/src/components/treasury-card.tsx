@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from "react"
 import { useConnection } from "@solana/wallet-adapter-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, ExternalLink, Vault, Percent, Shield } from "lucide-react"
+import { Copy, Check, ExternalLink, Vault, Percent, Shield, RefreshCw } from "lucide-react"
 import { formatLamportsToSol, formatPercentage, shortenPubkey } from "@/lib/format"
 import { getCurveConfigPDA } from "@/lib/pdas"
 import { fetchCurveConfig, CurveConfiguration } from "@/lib/solana"
 import { PROGRAM_ID, TREASURY_WALLET, DEFAULT_PAPERHAND_TAX_BPS } from "@/lib/constants"
-import { MOCK_TREASURY_STATS } from "@/lib/mock-data"
 
 export function TreasuryCard() {
   const { connection } = useConnection()
@@ -18,9 +17,6 @@ export function TreasuryCard() {
   const [treasuryBalance, setTreasuryBalance] = useState(0)
   const [copied, setCopied] = useState<'treasury' | 'program' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-
-  // Use mock treasury balance as fallback
-  const displayBalance = treasuryBalance > 0 ? treasuryBalance : MOCK_TREASURY_STATS.totalCollected * 1e9
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -35,7 +31,7 @@ export function TreasuryCard() {
       setConfig(configData)
       setTreasuryBalance(balance)
     } catch {
-      // Silent fail - use mock data
+      // Silent fail
     } finally {
       setIsLoading(false)
     }
@@ -70,31 +66,19 @@ export function TreasuryCard() {
       </CardHeader>
       <CardContent className="space-y-5">
         {isLoading ? (
-          <div className="space-y-3">
-            <div className="h-4 bg-[#2A3338] rounded w-3/4 animate-pulse"></div>
-            <div className="h-4 bg-[#2A3338] rounded w-1/2 animate-pulse"></div>
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-5 h-5 text-[#5F6A6E] animate-spin" />
           </div>
         ) : (
           <div className="space-y-5">
             {/* Treasury Balance - Featured */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-[#141D21] to-[#0E1518] border border-[#2A3338]">
+            <div className="p-5 rounded-xl bg-[#0E1518] border border-[#2A3338]">
               <span className="text-xs text-[#5F6A6E] uppercase tracking-wider block mb-2">Total Collected</span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-medium text-[#E9E1D8] text-value">
-                  {formatLamportsToSol(displayBalance)}
+                  {formatLamportsToSol(treasuryBalance)}
                 </span>
                 <span className="text-lg text-[#5F6A6E]">SOL</span>
-              </div>
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#2A3338]">
-                <div>
-                  <span className="text-xs text-[#5F6A6E] block">Taxes collected</span>
-                  <span className="text-sm text-[#9FA6A3] text-value">{MOCK_TREASURY_STATS.taxesPaid}</span>
-                </div>
-                <div className="w-px h-8 bg-[#2A3338]" />
-                <div>
-                  <span className="text-xs text-[#5F6A6E] block">Avg per tax</span>
-                  <span className="text-sm text-[#9FA6A3] text-value">{MOCK_TREASURY_STATS.avgTaxPerSell.toFixed(4)} SOL</span>
-                </div>
               </div>
             </div>
 

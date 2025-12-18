@@ -1,11 +1,35 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+import { useConnection } from "@solana/wallet-adapter-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { MOCK_TOP_PAPERHAND, MOCK_TREASURY_STATS } from "@/lib/mock-data"
-import { Trophy, Skull, TrendingDown } from "lucide-react"
+import { TREASURY_WALLET } from "@/lib/constants"
+import { formatLamportsToSol } from "@/lib/format"
+import { Skull, RefreshCw, TrendingDown } from "lucide-react"
 
 export function Leaderboard() {
+  const { connection } = useConnection()
+  const [treasuryBalance, setTreasuryBalance] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const balance = await connection.getBalance(TREASURY_WALLET)
+      setTreasuryBalance(balance)
+    } catch {
+      // Error fetching
+    } finally {
+      setIsLoading(false)
+    }
+  }, [connection])
+
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
+  }, [fetchData])
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -18,65 +42,39 @@ export function Leaderboard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Stats summary */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
-            <span className="text-xs text-[#5F6A6E] block mb-1">Total Collected</span>
-            <span className="text-lg font-medium text-[#E9E1D8] text-value">
-              {MOCK_TREASURY_STATS.totalCollected.toFixed(2)} SOL
-            </span>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-5 h-5 text-[#5F6A6E] animate-spin" />
           </div>
-          <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
-            <span className="text-xs text-[#5F6A6E] block mb-1">Taxes Paid</span>
-            <span className="text-lg font-medium text-[#E9E1D8] text-value">
-              {MOCK_TREASURY_STATS.taxesPaid}
-            </span>
-          </div>
-        </div>
-
-        <div className="divider-line" />
-
-        {/* Leaderboard */}
-        <div className="space-y-2">
-          {MOCK_TOP_PAPERHAND.map((entry, i) => (
-            <div 
-              key={i}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                i === 0 
-                  ? 'bg-[#141D21] border-[#8C3A32]' 
-                  : 'bg-[#0E1518] border-[#2A3338]'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-6 h-6 rounded flex items-center justify-center text-xs font-medium ${
-                  i === 0 ? 'bg-[#8C3A32] text-[#E9E1D8]' :
-                  i === 1 ? 'bg-[#2A3338] text-[#E9E1D8]' :
-                  i === 2 ? 'bg-[#2A3338] text-[#9FA6A3]' :
-                  'bg-transparent text-[#5F6A6E]'
-                }`}>
-                  {i === 0 ? <Trophy className="w-3 h-3" /> : i + 1}
-                </div>
-                <code className="text-sm text-[#9FA6A3] font-mono">{entry.wallet}</code>
+        ) : (
+          <>
+            {/* Stats summary */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
+                <span className="text-xs text-[#5F6A6E] block mb-1">Treasury Balance</span>
+                <span className="text-lg font-medium text-[#E9E1D8] text-value">
+                  {formatLamportsToSol(treasuryBalance)} SOL
+                </span>
               </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <span className="text-sm text-[#8C3A32] text-value font-medium">
-                    {entry.taxPaid.toFixed(2)} SOL
-                  </span>
-                  <span className="text-xs text-[#5F6A6E] block">{entry.sells} sells</span>
-                </div>
+              <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
+                <span className="text-xs text-[#5F6A6E] block mb-1">Penalty Rate</span>
+                <span className="text-lg font-medium text-[#8C3A32] text-value">50%</span>
               </div>
             </div>
-          ))}
-        </div>
 
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <TrendingDown className="w-4 h-4 text-[#5F6A6E]" />
-          <span className="text-xs text-[#5F6A6E]">Updated in real-time</span>
-        </div>
+            <div className="divider-line" />
+
+            {/* Leaderboard - empty until we have data */}
+            <div className="text-center py-8 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-[#0E1518] border border-[#2A3338] flex items-center justify-center mx-auto">
+                <TrendingDown className="w-5 h-5 text-[#5F6A6E]" />
+              </div>
+              <p className="text-sm text-[#5F6A6E]">No paper hands yet</p>
+              <p className="text-xs text-[#5F6A6E]">Leaderboard updates after first penalty</p>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )
 }
-
