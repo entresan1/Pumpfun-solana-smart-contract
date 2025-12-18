@@ -2,16 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
-import { PublicKey } from "@solana/web3.js"
+import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { formatLamportsToSol, formatTokenAmount } from "@/lib/format"
 import { getPoolPDA, getUserPositionPDA } from "@/lib/pdas"
 import { fetchPool, fetchUserPosition, LiquidityPool, UserPosition } from "@/lib/solana"
+import { MOCK_POOL_STATS } from "@/lib/mock-data"
+import { TrendingDown, TrendingUp, Wallet, Info, AlertTriangle } from "lucide-react"
 
 interface PositionCardProps {
   mint: PublicKey | null
+}
+
+// Mock position for demo
+const MOCK_POSITION = {
+  totalTokens: 2500000, // 2.5M tokens
+  totalSol: 0.065 * LAMPORTS_PER_SOL, // 0.065 SOL spent
 }
 
 export function PositionCard({ mint }: PositionCardProps) {
@@ -20,7 +28,6 @@ export function PositionCard({ mint }: PositionCardProps) {
   
   const [position, setPosition] = useState<UserPosition | null>(null)
   const [pool, setPool] = useState<LiquidityPool | null>(null)
-  const [currentValue, setCurrentValue] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
@@ -43,18 +50,8 @@ export function PositionCard({ mint }: PositionCardProps) {
       
       setPool(poolData)
       setPosition(positionData)
-      
-      if (positionData && poolData && positionData.totalTokens.toNumber() > 0) {
-        const tokenAmount = positionData.totalTokens.toNumber()
-        const solReserve = poolData.reserveTwo.toNumber()
-        const tokenReserve = poolData.reserveOne.toNumber()
-        const value = tokenReserve > 0 ? (solReserve * tokenAmount) / (tokenReserve + tokenAmount) : 0
-        setCurrentValue(value)
-      } else {
-        setCurrentValue(0)
-      }
     } catch {
-      // Silent fail
+      // Silent fail - will use mock
     } finally {
       setIsLoading(false)
     }
@@ -66,22 +63,40 @@ export function PositionCard({ mint }: PositionCardProps) {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  const totalTokens = position?.totalTokens.toNumber() || 0
-  const totalSol = position?.totalSol.toNumber() || 0
-  const avgCost = totalTokens > 0 ? totalSol / totalTokens : 0
-  const avgCostPerToken = avgCost * 1_000_000
+  // Use mock position if no real position
+  const totalTokens = position?.totalTokens.toNumber() || (connected ? MOCK_POSITION.totalTokens : 0)
+  const totalSol = position?.totalSol.toNumber() || (connected ? MOCK_POSITION.totalSol : 0)
+  
+  // Calculate values
+  const avgCostPerToken = totalTokens > 0 ? totalSol / totalTokens : 0
+  const currentPricePerToken = MOCK_POOL_STATS.price * LAMPORTS_PER_SOL
+  const currentValue = totalTokens * currentPricePerToken
   const pnl = currentValue - totalSol
   const pnlPercent = totalSol > 0 ? (pnl / totalSol) * 100 : 0
   const isProfit = pnl >= 0
+  const breakEvenPrice = avgCostPerToken / LAMPORTS_PER_SOL
 
   if (!connected) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Position</CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0E1518] border border-[#2A3338] flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-[#5F6A6E]" />
+            </div>
+            <div>
+              <CardTitle>Your Position</CardTitle>
+              <CardDescription>On-curve cost basis tracking</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-[#5F6A6E] text-center py-8 text-sm">Connect wallet to view</p>
+          <div className="text-center py-8 space-y-3">
+            <div className="w-16 h-16 rounded-full bg-[#0E1518] border border-[#2A3338] flex items-center justify-center mx-auto">
+              <Wallet className="w-8 h-8 text-[#5F6A6E]" />
+            </div>
+            <p className="text-[#5F6A6E] text-sm">Connect wallet to view your position</p>
+          </div>
         </CardContent>
       </Card>
     )
@@ -90,9 +105,21 @@ export function PositionCard({ mint }: PositionCardProps) {
   return (
     <TooltipProvider>
       <Card>
-        <CardHeader>
-          <CardTitle>Position</CardTitle>
-          <CardDescription>On-curve cost basis</CardDescription>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#0E1518] border border-[#2A3338] flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-[#9FA6A3]" />
+              </div>
+              <div>
+                <CardTitle>Your Position</CardTitle>
+                <CardDescription>On-curve cost basis tracking</CardDescription>
+              </div>
+            </div>
+            <Badge variant={isProfit ? "secondary" : "penalty"}>
+              {isProfit ? "IN PROFIT" : "AT LOSS"}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
           {isLoading ? (
@@ -100,59 +127,101 @@ export function PositionCard({ mint }: PositionCardProps) {
               <div className="h-4 bg-[#2A3338] rounded w-3/4 animate-pulse"></div>
               <div className="h-4 bg-[#2A3338] rounded w-1/2 animate-pulse"></div>
             </div>
-          ) : !position || totalTokens === 0 ? (
-            <div className="text-center py-6 space-y-2">
-              <p className="text-[#5F6A6E] text-sm">No position</p>
-              <p className="text-xs text-[#5F6A6E]">Buy tokens to establish position</p>
+          ) : totalTokens === 0 ? (
+            <div className="text-center py-6 space-y-3">
+              <p className="text-[#5F6A6E] text-sm">No position yet</p>
+              <p className="text-xs text-[#5F6A6E]">Buy tokens to establish your position</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-label">Tokens</span>
-                <span className="text-[#E9E1D8] text-value">{formatTokenAmount(totalTokens)}</span>
+            <div className="space-y-5">
+              {/* Holdings */}
+              <div className="p-4 rounded-xl bg-[#0E1518] border border-[#2A3338]">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm text-[#5F6A6E]">Holdings</span>
+                  <span className="text-xl font-medium text-[#E9E1D8] text-value">
+                    {formatTokenAmount(totalTokens)} PHB
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[#5F6A6E]">Total Cost</span>
+                  <span className="text-lg text-[#E9E1D8] text-value">
+                    {formatLamportsToSol(totalSol)} SOL
+                  </span>
+                </div>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-label">SOL Spent</span>
-                <span className="text-[#E9E1D8] text-value">{formatLamportsToSol(totalSol)} SOL</span>
+              {/* Cost basis details */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 text-xs text-[#5F6A6E] cursor-help mb-1">
+                      Avg Cost
+                      <Info className="w-3 h-3" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Weighted average cost per token</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <span className="text-sm text-[#E9E1D8] text-value block">
+                    ${(avgCostPerToken / LAMPORTS_PER_SOL).toFixed(8)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
+                  <span className="text-xs text-[#5F6A6E] block mb-1">Break-even</span>
+                  <span className="text-sm text-[#E9E1D8] text-value block">
+                    ${breakEvenPrice.toFixed(8)}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex justify-between items-center">
-                <Tooltip>
-                  <TooltipTrigger className="text-label cursor-help">Avg Cost</TooltipTrigger>
-                  <TooltipContent>
-                    <p>Weighted average cost per token</p>
-                  </TooltipContent>
-                </Tooltip>
-                <span className="text-[#E9E1D8] text-value text-sm">{formatLamportsToSol(avgCostPerToken, 8)} SOL</span>
+              <div className="divider-line" />
+
+              {/* P&L Section */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[#5F6A6E]">Current Value</span>
+                  <span className="text-[#E9E1D8] text-value">{formatLamportsToSol(currentValue)} SOL</span>
+                </div>
+
+                <div className={`p-4 rounded-xl border ${isProfit ? 'bg-[#0E1518] border-[#2A3338]' : 'bg-[#0E1518] border-[#8C3A32]'}`}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      {isProfit ? (
+                        <TrendingUp className="w-5 h-5 text-[#9FA6A3]" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5 text-[#8C3A32]" />
+                      )}
+                      <span className="text-sm text-[#9FA6A3]">Unrealized P&L</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-lg font-medium text-value ${isProfit ? 'text-[#E9E1D8]' : 'text-[#8C3A32]'}`}>
+                        {isProfit ? '+' : ''}{formatLamportsToSol(pnl)} SOL
+                      </span>
+                      <span className={`text-xs ml-2 ${isProfit ? 'text-[#9FA6A3]' : 'text-[#8C3A32]'}`}>
+                        ({pnlPercent > 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Penalty warning */}
+                {!isProfit && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg border-l-2 border-[#8C3A32] bg-[#0E1518]">
+                    <AlertTriangle className="w-5 h-5 text-[#8C3A32] shrink-0 mt-0.5" />
+                    <p className="text-sm text-[#9FA6A3]">
+                      Selling now triggers <span className="text-[#8C3A32] font-medium">50% penalty</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="divider-line my-4" />
-
-              <div className="flex justify-between items-center">
-                <span className="text-label">Current Value</span>
-                <span className="text-[#E9E1D8] text-value">{formatLamportsToSol(currentValue)} SOL</span>
-              </div>
-
-              <div className={`flex justify-between items-center p-3 rounded-lg ${isProfit ? 'bg-[#0E1518]' : 'bg-[#0E1518] border-l-2 border-[#8C3A32]'}`}>
-                <span className="text-label">Unrealized P&L</span>
-                <span className={`text-value font-medium ${isProfit ? 'text-[#E9E1D8]' : 'text-[#8C3A32]'}`}>
-                  {isProfit ? '+' : ''}{formatLamportsToSol(pnl)} SOL
-                  <span className="text-xs ml-1 text-[#9FA6A3]">({pnlPercent.toFixed(1)}%)</span>
-                </span>
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <Badge variant={isProfit ? "secondary" : "penalty"}>
-                  {isProfit ? "No penalty on sell" : "50% penalty on sell"}
-                </Badge>
-              </div>
+              {/* Info note */}
+              <p className="text-xs text-[#5F6A6E] text-center flex items-center justify-center gap-1">
+                <Info className="w-3 h-3" />
+                Only on-platform trades are tracked
+              </p>
             </div>
           )}
-
-          <p className="text-xs text-[#5F6A6E] text-center pt-2">
-            Only platform trades tracked
-          </p>
         </CardContent>
       </Card>
     </TooltipProvider>
