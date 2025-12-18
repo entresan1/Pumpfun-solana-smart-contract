@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub fn initialize(
     ctx: Context<InitializeCurveConfiguration>,
     fees: f64,
+    paperhand_tax_bps: u16,
 ) -> Result<()> {
     let dex_config = &mut ctx.accounts.dex_configuration_account;
 
@@ -11,15 +12,31 @@ pub fn initialize(
         return err!(CustomError::InvalidFee);
     }
 
+    // Validate paperhand tax bps (max 100% = 10000 bps)
+    if paperhand_tax_bps > 10000 {
+        return err!(CustomError::InvalidTaxBps);
+    }
+
     let _ = transfer_sol_to_pool(
         ctx.accounts.admin.to_account_info(),
         ctx.accounts.global_account.to_account_info(),
         10000000,
         ctx.accounts.system_program.to_account_info()
-
     );
 
-    dex_config.set_inner(CurveConfiguration::new(fees));
+    // Initialize treasury vault with some lamports for rent exemption
+    let _ = transfer_sol_to_pool(
+        ctx.accounts.admin.to_account_info(),
+        ctx.accounts.treasury_vault.to_account_info(),
+        10000000,
+        ctx.accounts.system_program.to_account_info()
+    );
+
+    dex_config.set_inner(CurveConfiguration::new(
+        fees,
+        ctx.accounts.treasury_vault.key(),
+        paperhand_tax_bps,
+    ));
 
     Ok(())
 }
@@ -35,13 +52,21 @@ pub struct InitializeCurveConfiguration<'info> {
     )]
     pub dex_configuration_account: Box<Account<'info, CurveConfiguration>>,
 
-    /// CHECK
+    /// CHECK: This is the global SOL vault PDA
     #[account(
         mut,
         seeds = [b"global"],
         bump,
     )]
     pub global_account: AccountInfo<'info>,
+
+    /// CHECK: Treasury vault PDA that will receive paperhand taxes
+    #[account(
+        mut,
+        seeds = [CurveConfiguration::TREASURY_VAULT_SEED.as_bytes()],
+        bump,
+    )]
+    pub treasury_vault: AccountInfo<'info>,
 
     #[account(mut)]
     pub admin: Signer<'info>,

@@ -31,4 +31,20 @@ pub enum CustomError {
 
     #[msg("Overflow or underflow occured")]
     OverflowOrUnderflowOccurred,
+
+    // PaperHandBitchTax errors
+    #[msg("Insufficient position: trying to sell more than tracked position")]
+    InsufficientPosition,
+
+    #[msg("Position not initialized: user has no buy history for this pool")]
+    PositionNotInitialized,
+
+    #[msg("Math overflow occurred during calculation")]
+    MathOverflow,
+
+    #[msg("Invalid treasury account")]
+    InvalidTreasury,
+
+    #[msg("Invalid paperhand tax basis points (must be <= 10000)")]
+    InvalidTaxBps,
 }

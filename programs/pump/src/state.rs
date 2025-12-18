@@ -1,4 +1,3 @@
-use crate::consts::INITIAL_PRICE;
 use crate::errors::CustomError;
 use crate::utils::convert_from_float;
 use crate::utils::convert_to_float;
@@ -6,7 +5,6 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::cmp;
-use std::ops::Add;
 use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Sub;
@@ -14,16 +12,109 @@ use std::ops::Sub;
 #[account]
 pub struct CurveConfiguration {
     pub fees: f64,
+    /// Treasury wallet that receives the PaperHand tax
+    pub treasury: Pubkey,
+    /// Tax rate in basis points (e.g., 5000 = 50%)
+    pub paperhand_tax_bps: u16,
 }
 
 impl CurveConfiguration {
     pub const SEED: &'static str = "CurveConfiguration";
+    pub const TREASURY_VAULT_SEED: &'static str = "treasury_vault";
 
-    // Discriminator (8) + f64 (8)
-    pub const ACCOUNT_SIZE: usize = 8 + 32 + 8;
+    // Discriminator (8) + f64 (8) + Pubkey (32) + u16 (2) + padding (6)
+    pub const ACCOUNT_SIZE: usize = 8 + 8 + 32 + 2 + 6;
 
-    pub fn new(fees: f64) -> Self {
-        Self { fees }
+    pub fn new(fees: f64, treasury: Pubkey, paperhand_tax_bps: u16) -> Self {
+        Self { 
+            fees, 
+            treasury,
+            paperhand_tax_bps,
+        }
+    }
+}
+
+/// Tracks a user's cost basis for a specific pool
+/// Used to determine if a sell is at a loss for PaperHandBitchTax
+#[account]
+pub struct UserPosition {
+    /// The pool this position is for
+    pub pool: Pubkey,
+    /// The owner of this position
+    pub owner: Pubkey,
+    /// Total tokens bought through the bonding curve (in smallest units)
+    pub total_tokens: u64,
+    /// Total SOL spent buying tokens (in lamports)
+    pub total_sol: u64,
+    /// PDA bump seed
+    pub bump: u8,
+}
+
+impl UserPosition {
+    pub const SEED_PREFIX: &'static str = "position";
+
+    // Discriminator (8) + Pubkey (32) + Pubkey (32) + u64 (8) + u64 (8) + u8 (1)
+    pub const ACCOUNT_SIZE: usize = 8 + 32 + 32 + 8 + 8 + 1;
+
+    pub fn new(pool: Pubkey, owner: Pubkey, bump: u8) -> Self {
+        Self {
+            pool,
+            owner,
+            total_tokens: 0,
+            total_sol: 0,
+            bump,
+        }
+    }
+
+    /// Calculate cost basis for a given token amount using u128 for overflow safety
+    /// Returns the proportional SOL cost for the tokens being sold
+    pub fn calculate_cost_basis_for_sale(&self, token_amount: u64) -> Result<u64> {
+        if self.total_tokens == 0 {
+            return Ok(0);
+        }
+        
+        // Use u128 to prevent overflow: (total_sol * token_amount) / total_tokens
+        let cost = (self.total_sol as u128)
+            .checked_mul(token_amount as u128)
+            .ok_or(CustomError::MathOverflow)?
+            .checked_div(self.total_tokens as u128)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        // Ensure result fits in u64
+        if cost > u64::MAX as u128 {
+            return Err(CustomError::MathOverflow.into());
+        }
+        
+        Ok(cost as u64)
+    }
+
+    /// Update position after a buy
+    pub fn record_buy(&mut self, tokens_received: u64, sol_spent: u64) -> Result<()> {
+        self.total_tokens = self.total_tokens
+            .checked_add(tokens_received)
+            .ok_or(CustomError::MathOverflow)?;
+        self.total_sol = self.total_sol
+            .checked_add(sol_spent)
+            .ok_or(CustomError::MathOverflow)?;
+        Ok(())
+    }
+
+    /// Update position after a sell
+    /// Reduces total_tokens by token_amount and total_sol by cost_basis proportionally
+    pub fn record_sell(&mut self, token_amount: u64, cost_basis: u64) -> Result<()> {
+        self.total_tokens = self.total_tokens
+            .checked_sub(token_amount)
+            .ok_or(CustomError::InsufficientPosition)?;
+        self.total_sol = self.total_sol
+            .checked_sub(cost_basis)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        // Clean up dust when position is empty
+        if self.total_tokens == 0 {
+            self.total_sol = 0;
+        }
+        
+        Ok(())
     }
 }
 

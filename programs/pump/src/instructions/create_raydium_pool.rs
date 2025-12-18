@@ -3,17 +3,19 @@ use anchor_spl::token::{Mint, Token};
 
 use crate::state::LiquidityPool;
 
-pub fn remove_liquidity(
-    _ctx: Context<RemoveLiquidity>,
+pub fn create_raydium_pool(
+    _ctx: Context<CreateRaydiumPool>,
     _nonce: u8,
     _init_pc_amount: u64,
+    _init_coin_amount: u64,
 ) -> Result<()> {
-    // If you want to Interact with CPI, then plz contact to me.
+    // Raydium pool creation logic
+    // If you want to interact with CPI, contact the original developer
     Ok(())
 }
 
 #[derive(Accounts)]
-pub struct RemoveLiquidity<'info> {
+pub struct CreateRaydiumPool<'info> {
     #[account(
         mut,
         seeds = [LiquidityPool::POOL_SEED_PREFIX.as_bytes(), coin_mint.key().as_ref()],
@@ -21,7 +23,7 @@ pub struct RemoveLiquidity<'info> {
     )]
     pub pool: Box<Account<'info, LiquidityPool>>,
 
-    /// CHECK: This is the global SOL vault PDA
+    /// CHECK: Global account PDA
     #[account(
         mut,
         seeds = [b"global"],
@@ -38,3 +40,4 @@ pub struct RemoveLiquidity<'info> {
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
 }
+

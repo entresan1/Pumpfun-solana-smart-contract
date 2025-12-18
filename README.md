@@ -1,32 +1,87 @@
-## Pump.fun clone: Pumpfun smart contract for pump.fun fork, implemented all main functionalities of pump fun.
-This pumpfun smart contract forked pump.fun, but it's developed to give basic understanding about pump fun. 
-To get whole part of smart contract and backend & frontend, feel free to reach out of me[Whatsapp: https://wa.me/13137423660, Telegram: https://t.me/DevCutup]
-You can also get frontend and backend repository from my github.
+# PaperHandTax
 
+A Solana bonding curve that taxes paper hands. Sell at a loss, receive 50% less.
 
-program address
-https://solscan.io/account/3CCu4f3hXKne4i5uE7DHkiA9o4oqeAAFBNxR3BfYLivX?cluster=devnet
+## How It Works
 
-config transaction
-https://solscan.io/tx/9977V82eQoGq1GLmcabizpLeVwtG6MjpEyDVvikG4J7VhcawwQ7uxEtJVumj1nCs5nsfDYTFRcRv4pvPyWRFh3a?cluster=devnet
+When you sell below your cost basis, 50% of your SOL proceeds go to the protocol treasury.
 
-token launch tx
-https://solscan.io/tx/2Yc9N9oDQKkh2U89i3r7ciBJEUfSWAeVTVvmrLKs15wfJg1kK4Ax1J8uBxuBSExcQApCQBMw8nzxXLQrE14Ghn61?cluster=devnet
+### Loss Calculation
 
-swap tx
-https://solscan.io/tx/3z9puJ6Jcum1iQ9eA5q6hxoaVAKyKGkFFJuwqBjcrmgrA6xbpiLxwB5GDpD3cD7Wzuo48NViAZKKT9u72N6QSxPS?cluster=devnet
+- **Cost basis** is tracked per-wallet using weighted average of platform purchases
+- **Loss** = SOL you receive < your proportional cost basis
+- **Penalty** = 50% of proceeds routed to treasury
 
-curve reach tx
-https://solscan.io/tx/2QtdKZrhYuwJtWrd7dhja8mnNqZSmR4qbpo9iSLnrhkZADF3zzm8DojYVisvVaiGAkgmoU4ocSyo65EewJkpjvNo?cluster=devnet
+### Example
 
-withdraw tx
-https://solscan.io/tx/21VnRkwjGSCgUJY4KUtaNf2Sc13BUpjXp8nCmMhUFn8PPFNMkFywJFY79ZzhdVhuQUwSjmhAbyuhQutamw8Fj27u?cluster=devnet
+```
+You bought tokens for 1 SOL
+Market dumps
+You sell and would get 0.6 SOL back
 
+That's a loss. Tax kicks in.
 
-https://solscan.io/tx/5DunqPfmfuYs3cVDE7SowJ9F2jKtdq7t3E3yP5W63RBGgcoNdVPDQ72asotg7fjnEEFATfQuiwPRGc7xqvW3iF64?cluster=custom&customUrl=devnet
+You receive: 0.3 SOL
+Treasury gets: 0.3 SOL
+```
 
+### Selling at Profit?
 
-### Contact Information
-- Telegram: https://t.me/DevCutup
-- Whatsapp: https://wa.me/13137423660
-- Twitter: https://x.com/devcutup
+No tax. Zero. Diamond hands eat free.
+
+## Addresses
+
+| | Address |
+|---|---|
+| Token | `ydDccyq66xKtfqn5bsRpfFXz4WeF4fh3bgQBx1npump` |
+| Treasury | `x4Cu1KF26LgDoGsEajF6mV6ERCg4iBncrSSHvza7xEN` |
+| Program | `GyukgDYugNtzHiEdRroSiU5iFTCDJ1geAF2ekP6UbBTY` |
+
+## Technical Details
+
+### UserPosition Account
+
+Tracks per-wallet cost basis:
+- `total_tokens`: Tokens bought through platform
+- `total_sol`: SOL spent on those tokens
+- Seeds: `["position", pool, user]`
+
+### On Sell
+
+```
+cost_basis = (total_sol × tokens_sold) / total_tokens
+
+if sol_out < cost_basis:
+    tax = sol_out × 50%
+    user_receives = sol_out - tax
+    treasury_receives = tax
+```
+
+### Limitations
+
+- Only platform trades are tracked (external DEX trades not included)
+- Users can split wallets to avoid tracking (inherent limitation)
+
+## Development
+
+### Build
+
+```bash
+anchor build
+```
+
+### Run Frontend
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
+## Network
+
+**Mainnet** - Live on Solana mainnet-beta
+
+## License
+
+MIT
