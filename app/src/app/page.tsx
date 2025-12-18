@@ -26,7 +26,7 @@ export default function Home() {
               <div className="w-1 h-12 bg-[#2A3338]" />
               <div>
                 <h1 className="text-3xl font-medium text-[#E9E1D8] tracking-tight">
-                  PaperHandTax
+                  Paper Hand Bitch Tax
                 </h1>
                 <p className="text-[#9FA6A3] mt-1">
                   Sell at a loss. Receive 50% less.
@@ -69,7 +69,7 @@ export default function Home() {
           <footer className="mt-24 pt-8 border-t border-[#2A3338]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6 text-xs text-[#5F6A6E]">
-                <span>PaperHandTax Protocol</span>
+                <span>Paper Hand Bitch Tax Protocol</span>
                 <span className="w-px h-3 bg-[#2A3338]" />
                 <span>Mainnet</span>
               </div>

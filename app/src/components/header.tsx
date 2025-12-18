@@ -16,13 +16,13 @@ export function Header() {
           <div className="flex items-center gap-3">
             <Image 
               src={logo} 
-              alt="PaperHandTax" 
+              alt="Paper Hand Bitch Tax" 
               width={32} 
               height={32}
               className="rounded-lg"
             />
             <span className="font-medium text-[#E9E1D8] tracking-tight">
-              PaperHandTax
+              Paper Hand Bitch Tax
             </span>
           </div>
 

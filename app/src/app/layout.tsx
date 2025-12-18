@@ -4,7 +4,7 @@ import { WalletProvider } from "@/components/wallet-provider";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
-  title: "PaperHandTax",
+  title: "Paper Hand Bitch Tax",
   description: "Bonding curve with loss-based taxation. Sell at a loss, receive 50% less.",
   icons: {
     icon: [
