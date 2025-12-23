@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { useConnection } from "@solana/wallet-adapter-react"
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
+import { getAssociatedTokenAddressSync } from "@solana/spl-token"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getPoolPDA, getTreasuryVaultPDA } from "@/lib/pdas"
+import { getPoolPDA, getTreasuryVaultPDA, getGlobalPDA } from "@/lib/pdas"
 import { RefreshCw, ExternalLink, ArrowUpRight, ArrowDownRight, Skull } from "lucide-react"
 
 interface Trade {
@@ -73,8 +74,16 @@ export function TradesTable({ mint }: TradesTableProps) {
                     const preTokenBalances = tx.meta.preTokenBalances || []
                     const postTokenBalances = tx.meta.postTokenBalances || []
 
+                    // Derive pool token account to ignore its changes (minting/lp)
+                    const [globalPDA] = getGlobalPDA()
+                    const poolTokenAccount = getAssociatedTokenAddressSync(mint, globalPDA, true)
+
                     let tokenChange = 0
                     for (const post of postTokenBalances) {
+                        const accountKey = tx.transaction.message.accountKeys[post.accountIndex].pubkey
+                        // Skip if this is the pool's token account
+                        if (accountKey.equals(poolTokenAccount)) continue
+
                         const pre = preTokenBalances.find(
                             p => p.accountIndex === post.accountIndex
                         )
@@ -82,7 +91,7 @@ export function TradesTable({ mint }: TradesTableProps) {
                         const postAmount = post.uiTokenAmount.uiAmount || 0
                         const change = postAmount - preAmount
 
-                        // Check if this is the user's token account (not the pool)
+                        // Check if this is a user's token account (not the pool)
                         if (Math.abs(change) > 0) {
                             tokenChange = change
                             break
