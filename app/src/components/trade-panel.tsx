@@ -12,27 +12,29 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { formatLamportsToSol, formatTokenAmount, calculateCostBasisForSale, isLoss, calculateTax } from "@/lib/format"
 import { getPoolPDA, getUserPositionPDA, getCurveConfigPDA } from "@/lib/pdas"
 import { fetchPool, fetchUserPosition, fetchCurveConfig, calculateBuyOutput, calculateSellOutput, LiquidityPool, UserPosition, CurveConfiguration } from "@/lib/solana"
+import { createSwapTransaction } from "@/lib/program"
 import { AlertTriangle, ArrowDown, ArrowUp, Zap, RefreshCw } from "lucide-react"
 
 interface TradePanelProps {
   mint: PublicKey | null
   onTradeComplete?: () => void
+  className?: string
 }
 
-export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
+export function TradePanel({ mint, onTradeComplete, className }: TradePanelProps) {
   const { connection } = useConnection()
-  const { publicKey, connected } = useWallet()
-  
+  const { publicKey, connected, sendTransaction } = useWallet()
+
   const [activeTab, setActiveTab] = useState("buy")
   const [amount, setAmount] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isDataLoading, setIsDataLoading] = useState(true)
-  
+
   const [pool, setPool] = useState<LiquidityPool | null>(null)
   const [position, setPosition] = useState<UserPosition | null>(null)
   const [config, setConfig] = useState<CurveConfiguration | null>(null)
   const [walletBalance, setWalletBalance] = useState(0)
-  
+
   const [estimatedOutput, setEstimatedOutput] = useState(0)
   const [costBasis, setCostBasis] = useState(0)
   const [isAtLoss, setIsAtLoss] = useState(false)
@@ -44,15 +46,15 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
       if (mint) {
         const [poolPDA] = getPoolPDA(mint)
         const [configPDA] = getCurveConfigPDA()
-        
+
         const [poolData, configData] = await Promise.all([
           fetchPool(connection, poolPDA),
           fetchCurveConfig(connection, configPDA)
         ])
-        
+
         setPool(poolData)
         setConfig(configData)
-        
+
         if (publicKey) {
           const [positionPDA] = getUserPositionPDA(poolPDA, publicKey)
           const [positionData, balance] = await Promise.all([
@@ -110,7 +112,7 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
         feePct
       )
       setEstimatedOutput(solOut)
-      
+
       if (position && position.totalTokens.toNumber() > 0) {
         const basis = calculateCostBasisForSale(
           position.totalSol.toNumber(),
@@ -118,10 +120,10 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
           tokenAmount
         )
         setCostBasis(basis)
-        
+
         const atLoss = isLoss(solOut, basis)
         setIsAtLoss(atLoss)
-        
+
         if (atLoss) {
           const tax = calculateTax(solOut, taxBps)
           setTaxAmount(tax)
@@ -150,26 +152,72 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
   }
 
   const handleTrade = async () => {
-    if (!connected || !publicKey) {
+    if (!connected || !publicKey || !sendTransaction) {
       alert("Please connect your wallet")
       return
     }
-    
-    if (!pool) {
+
+    if (!pool || !mint) {
       alert("Pool not available yet")
       return
     }
-    
+
+    const numAmount = Number(amount)
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert("Please enter a valid amount")
+      return
+    }
+
     setIsLoading(true)
-    
-    // Transaction would be submitted here
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setIsLoading(false)
-    onTradeComplete?.()
-    setAmount("")
-    
-    alert("Trading will be available after launch")
+
+    try {
+      // Calculate amount in smallest units
+      let amountInSmallestUnit: bigint
+      let style: number
+
+      if (activeTab === "buy") {
+        // BUY: amount is in SOL, convert to lamports
+        amountInSmallestUnit = BigInt(Math.floor(numAmount * LAMPORTS_PER_SOL))
+        style = 2 // BUY
+      } else {
+        // SELL: amount is in tokens, convert to smallest unit (assuming 6 decimals)
+        amountInSmallestUnit = BigInt(Math.floor(numAmount * 1_000_000))
+        style = 1 // SELL
+      }
+
+      // Create the swap transaction
+      const transaction = await createSwapTransaction(
+        connection,
+        { amount: amountInSmallestUnit, style },
+        mint,
+        publicKey
+      )
+
+      // Send transaction via wallet adapter
+      const signature = await sendTransaction(transaction, connection)
+
+      // Wait for confirmation
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+      await connection.confirmTransaction({
+        blockhash,
+        lastValidBlockHeight,
+        signature,
+      })
+
+      console.log("Transaction confirmed:", signature)
+
+      // Refresh data
+      onTradeComplete?.()
+      setAmount("")
+      fetchData()
+
+    } catch (error: unknown) {
+      console.error("Swap error:", error)
+      const errorMessage = error instanceof Error ? error.message : "Transaction failed"
+      alert(`Swap failed: ${errorMessage}`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const netSolReceived = estimatedOutput - taxAmount
@@ -177,18 +225,19 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
 
   return (
     <TooltipProvider>
-      <Card>
+      <Card className={className}>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle>Trade</CardTitle>
             <div className="flex items-center gap-2">
+              {isDataLoading && <RefreshCw className="w-4 h-4 text-[#5F6A6E] animate-spin" />}
               <Zap className="w-4 h-4 text-[#5F6A6E]" />
               <span className="text-xs text-[#5F6A6E]">Bonding Curve</span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {isDataLoading ? (
+          {!pool && isDataLoading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="w-5 h-5 text-[#5F6A6E] animate-spin" />
             </div>
@@ -322,12 +371,12 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
                       <span className="text-[#9FA6A3]">Your cost basis</span>
                       <span className="text-[#E9E1D8] text-value">{formatLamportsToSol(costBasis)} SOL</span>
                     </div>
-                    
+
                     <div className="flex justify-between text-sm">
                       <span className="text-[#9FA6A3]">Current value</span>
                       <span className="text-[#E9E1D8] text-value">{formatLamportsToSol(estimatedOutput)} SOL</span>
                     </div>
-                    
+
                     {isAtLoss && (
                       <>
                         <div className="divider-accent" />
@@ -340,9 +389,9 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
                         </div>
                       </>
                     )}
-                    
+
                     <div className="divider-line pt-2" />
-                    
+
                     <div className="flex justify-between pt-2">
                       <span className="text-[#E9E1D8] font-medium">You receive</span>
                       <span className={`font-medium text-lg text-value ${isAtLoss ? 'text-[#8C3A32]' : 'text-[#E9E1D8]'}`}>
@@ -368,10 +417,10 @@ export function TradePanel({ mint, onTradeComplete }: TradePanelProps) {
                   onClick={handleTrade}
                   disabled={!connected || !amount || Number(amount) <= 0 || isLoading || positionTokens === 0}
                 >
-                  {isLoading ? "Processing..." : 
-                   !connected ? "Connect Wallet" : 
-                   positionTokens === 0 ? "No Position" :
-                   isAtLoss ? `Sell (50% Tax Applied)` : "Sell PHB"}
+                  {isLoading ? "Processing..." :
+                    !connected ? "Connect Wallet" :
+                      positionTokens === 0 ? "No Position" :
+                        isAtLoss ? `Sell (50% Tax Applied)` : "Sell PHB"}
                 </Button>
               </TabsContent>
             </Tabs>

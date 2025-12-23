@@ -335,7 +335,7 @@ impl<'info> LiquidityPoolAccount<'info> for Account<'info, LiquidityPool> {
             &mut Account<'info, TokenAccount>,
             &mut Account<'info, TokenAccount>,
         ),
-        token_two_accounts: (
+        _token_two_accounts: (
             &mut Account<'info, Mint>,
             &mut AccountInfo<'info>,
             &mut AccountInfo<'info>,
@@ -346,7 +346,7 @@ impl<'info> LiquidityPoolAccount<'info> for Account<'info, LiquidityPool> {
         authority: &Signer<'info>,
         token_program: &Program<'info, Token>,
     ) -> Result<()> {
-        let mut shares_to_allocate = 0_u64;
+        let shares_to_allocate;
 
         if self.total_supply == 0 {
             let sqrt_shares = (convert_to_float(amount_one, token_one_accounts.0.decimals)
@@ -402,12 +402,12 @@ impl<'info> LiquidityPoolAccount<'info> for Account<'info, LiquidityPool> {
 
     fn remove_liquidity(
         &mut self,
-        token_one_accounts: (
+        _token_one_accounts: (
             &mut Account<'info, Mint>,
             &mut Account<'info, TokenAccount>,
             &mut Account<'info, TokenAccount>,
         ),
-        token_two_accounts: (
+        _token_two_accounts: (
             &mut Account<'info, Mint>,
             &mut AccountInfo<'info>,
             &mut AccountInfo<'info>,
@@ -415,7 +415,7 @@ impl<'info> LiquidityPoolAccount<'info> for Account<'info, LiquidityPool> {
         shares: u64,
         liquidity_provider_account: &mut Account<'info, LiquidityProvider>,
         _authority: &Signer<'info>,
-        token_program: &Program<'info, Token>,
+        _token_program: &Program<'info, Token>,
     ) -> Result<()> {
         if shares <= 0 {
             return err!(CustomError::FailedToRemoveLiquidity);

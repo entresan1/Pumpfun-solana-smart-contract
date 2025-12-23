@@ -13,20 +13,23 @@ import { TrendingDown, TrendingUp, Wallet, Info, AlertTriangle, RefreshCw } from
 
 interface PositionCardProps {
   mint: PublicKey | null
+  className?: string
 }
 
-export function PositionCard({ mint }: PositionCardProps) {
+export function PositionCard({ mint, className }: PositionCardProps) {
   const { connection } = useConnection()
   const { publicKey, connected } = useWallet()
-  
+
   const [position, setPosition] = useState<UserPosition | null>(null)
   const [pool, setPool] = useState<LiquidityPool | null>(null)
+  const [totalSupply, setTotalSupply] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     if (!mint || !publicKey) {
       setPosition(null)
       setPool(null)
+      setTotalSupply(0)
       setIsLoading(false)
       return
     }
@@ -35,14 +38,16 @@ export function PositionCard({ mint }: PositionCardProps) {
     try {
       const [poolPDA] = getPoolPDA(mint)
       const [positionPDA] = getUserPositionPDA(poolPDA, publicKey)
-      
-      const [poolData, positionData] = await Promise.all([
+
+      const [poolData, positionData, supplyData] = await Promise.all([
         fetchPool(connection, poolPDA),
-        fetchUserPosition(connection, positionPDA)
+        fetchUserPosition(connection, positionPDA),
+        connection.getTokenSupply(mint)
       ])
-      
+
       setPool(poolData)
       setPosition(positionData)
+      setTotalSupply(supplyData.value.uiAmount || 0)
     } catch {
       // Silent fail
     } finally {
@@ -59,7 +64,7 @@ export function PositionCard({ mint }: PositionCardProps) {
   // Calculate values from real data only
   const totalTokens = position?.totalTokens.toNumber() || 0
   const totalSol = position?.totalSol.toNumber() || 0
-  
+
   // Calculate current value based on pool reserves
   let currentValue = 0
   if (pool && totalTokens > 0) {
@@ -70,12 +75,30 @@ export function PositionCard({ mint }: PositionCardProps) {
       1 // 1% fee
     )
   }
-  
-  const avgCostPerToken = totalTokens > 0 ? totalSol / totalTokens : 0
+
+  // Market Cap Calculations
+  // Avoid division by zero
+  const totalTokensVal = totalTokens / 1_000_000 // atomic -> ui
+  const totalSolVal = totalSol / LAMPORTS_PER_SOL // lamports -> SOL
+
+  const avgCostPerToken = totalTokensVal > 0 ? totalSolVal / totalTokensVal : 0
+
+  // Entry Market Cap = Avg Price (SOL) * Total Supply
+  const entryMC = avgCostPerToken * totalSupply
+
+  // Break Even MC = Entry MC / (1 - fee) calculation to return same SOL
+  // Fee is 1% for sells. Selling inputs tokens.
+  // We want (SellOutputSOL) = TotalSolVal
+  // SellOutputSOL = (Tokens * Price * (1-fee)) 
+  // We need Price * Tokens * 0.99 = Cost
+  // Price * Tokens = Cost / 0.99
+  // Market Cap = Price * Supply
+  // BreakEvenMC = (Cost / Tokens / 0.99) * Supply = (AvgCost / 0.99) * Supply = EntryMC / 0.99
+  const breakEvenMC = entryMC > 0 ? entryMC / 0.99 : 0
+
   const pnl = currentValue - totalSol
   const pnlPercent = totalSol > 0 ? (pnl / totalSol) * 100 : 0
   const isProfit = pnl >= 0
-  const breakEvenPrice = avgCostPerToken / LAMPORTS_PER_SOL
 
   if (!connected) {
     return (
@@ -103,9 +126,14 @@ export function PositionCard({ mint }: PositionCardProps) {
     )
   }
 
+  const formatMC = (val: number) => {
+    if (val >= 1000) return `${(val / 1000).toFixed(2)}K SOL`
+    return `${val.toFixed(2)} SOL`
+  }
+
   return (
     <TooltipProvider>
-      <Card>
+      <Card className={className}>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -117,19 +145,20 @@ export function PositionCard({ mint }: PositionCardProps) {
                 <CardDescription>On-curve cost basis tracking</CardDescription>
               </div>
             </div>
-            {totalTokens > 0 && (
-              <Badge variant={isProfit ? "secondary" : "penalty"}>
-                {isProfit ? "IN PROFIT" : "AT LOSS"}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {isLoading && (
+                <RefreshCw className="w-4 h-4 text-[#5F6A6E] animate-spin" />
+              )}
+              {totalTokens > 0 && (
+                <Badge variant={isProfit ? "secondary" : "penalty"}>
+                  {isProfit ? "IN PROFIT" : "AT LOSS"}
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="w-5 h-5 text-[#5F6A6E] animate-spin" />
-            </div>
-          ) : totalTokens === 0 ? (
+          {totalTokens === 0 ? (
             <div className="text-center py-8 space-y-3">
               <div className="w-12 h-12 rounded-full bg-[#0E1518] border border-[#2A3338] flex items-center justify-center mx-auto">
                 <Wallet className="w-5 h-5 text-[#5F6A6E]" />
@@ -155,29 +184,7 @@ export function PositionCard({ mint }: PositionCardProps) {
                 </div>
               </div>
 
-              {/* Cost basis details */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
-                  <Tooltip>
-                    <TooltipTrigger className="flex items-center gap-1 text-xs text-[#5F6A6E] cursor-help mb-1">
-                      Avg Cost
-                      <Info className="w-3 h-3" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Weighted average cost per token</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="text-sm text-[#E9E1D8] text-value block">
-                    ${(avgCostPerToken / LAMPORTS_PER_SOL).toFixed(8)}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-[#0E1518] border border-[#2A3338]">
-                  <span className="text-xs text-[#5F6A6E] block mb-1">Break-even</span>
-                  <span className="text-sm text-[#E9E1D8] text-value block">
-                    ${breakEvenPrice.toFixed(8)}
-                  </span>
-                </div>
-              </div>
+              {/* Cost basis details - REMOVED */}
 
               <div className="divider-line" />
 

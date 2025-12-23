@@ -8,7 +8,7 @@ pub mod utils;
 
 use crate::instructions::*;
 
-declare_id!("GyukgDYugNtzHiEdRroSiU5iFTCDJ1geAF2ekP6UbBTY");
+declare_id!("8XQAVjtT1QSYgVp8WzhVdwuSvGfDX9UifZupiLvBe2Lh");
 
 #[program]
 pub mod pump {
@@ -60,12 +60,29 @@ pub mod pump {
         instructions::swap(ctx, amount, style)
     }
 
-    pub fn create_raydium_pool(
-        ctx: Context<CreateRaydiumPool>,
-        nonce: u8,
-        init_pc_amount: u64,
-        init_coin_amount: u64,
+// function removed
+
+    /// Launch a new token with Paper Hand Tax enabled
+    /// 
+    /// Creates a new SPL token, sets Metaplex metadata, initializes the bonding
+    /// curve pool, and mints the initial supply.
+    /// 
+    /// # Arguments
+    /// * `name` - Token name (max 32 chars)
+    /// * `symbol` - Token symbol (max 10 chars)
+    /// * `uri` - Metadata URI (max 200 chars)
+    /// * `decimals` - Token decimals (typically 6 or 9)
+    /// * `initial_supply` - Total supply to mint
+    /// * `initial_sol_reserve` - Initial SOL for bonding curve
+    pub fn launch(
+        ctx: Context<Launch>,
+        name: String,
+        symbol: String,
+        uri: String,
+        decimals: u8,
+        initial_supply: u64,
+        initial_sol_reserve: u64,
     ) -> Result<()> {
-        instructions::create_raydium_pool(ctx, nonce, init_pc_amount, init_coin_amount)
+        instructions::launch(ctx, name, symbol, uri, decimals, initial_supply, initial_sol_reserve)
     }
 }

@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
-// Program ID (deployed on mainnet)
-export const PROGRAM_ID = new PublicKey("GyukgDYugNtzHiEdRroSiU5iFTCDJ1geAF2ekP6UbBTY");
+// Program ID (deployed on devnet for testing)
+export const PROGRAM_ID = new PublicKey("8XQAVjtT1QSYgVp8WzhVdwuSvGfDX9UifZupiLvBe2Lh");
 
 // Token mint address for the pool
 export const TOKEN_MINT = new PublicKey("ydDccyq66xKtfqn5bsRpfFXz4WeF4fh3bgQBx1npump");
@@ -23,13 +23,13 @@ export const DEFAULT_PAPERHAND_TAX_BPS = 5000;
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 
 // Network
-export const NETWORK = "mainnet-beta";
+export const NETWORK = "devnet";
 
-// QuickNode RPC endpoint (reliable mainnet RPC)
-export const RPC_ENDPOINT = "https://small-twilight-sponge.solana-mainnet.quiknode.pro/71bdb31dd3e965467b1393cebaaebe69d481dbeb/";
+// Devnet RPC endpoint
+export const RPC_ENDPOINT = "https://api.devnet.solana.com";
 
 // WebSocket endpoint
-export const WS_ENDPOINT = "wss://small-twilight-sponge.solana-mainnet.quiknode.pro/71bdb31dd3e965467b1393cebaaebe69d481dbeb/";
+export const WS_ENDPOINT = "wss://api.devnet.solana.com";
 
 // Supabase
 export const SUPABASE_URL = "https://voskmcxmtvophehityoa.supabase.co";

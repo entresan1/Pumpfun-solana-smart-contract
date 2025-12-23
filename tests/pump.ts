@@ -5,11 +5,11 @@ import { Connection, PublicKey, Keypair, SystemProgram, Transaction, sendAndConf
 import { createMint, getOrCreateAssociatedTokenAccount, mintTo, getAssociatedTokenAddress } from "@solana/spl-token"
 import { expect } from "chai";
 import { BN } from "bn.js";
-import keys from '../keys/users.json'
-import key2 from '../keys/user2.json'
+const keys = require('../keys/users.json');
+const key2 = require('../keys/user2.json');
 import { ASSOCIATED_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 
-const connection = new Connection("http://localhost:8899")
+const connection = new Connection(anchor.AnchorProvider.env().connection.rpcEndpoint || "http://localhost:8899")
 const curveSeed = "CurveConfiguration"
 const POOL_SEED_PREFIX = "liquidity_pool"
 const LP_SEED_PREFIX = "LiqudityProvider"
@@ -297,7 +297,7 @@ describe("PaperHandBitchTax", () => {
       // Now sell to drop price (using position from the previous buy)
       const adminPosition = await program.account.userPosition.fetch(adminPositionPDA);
       const tokensToSell = adminPosition.totalTokens;
-      
+
       const sellTx = new Transaction()
         .add(
           ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }),
@@ -345,7 +345,7 @@ describe("PaperHandBitchTax", () => {
 
       // Sell all tokens
       const sellAmount = positionBefore.totalTokens;
-      
+
       const tx = new Transaction()
         .add(
           ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }),
@@ -393,7 +393,7 @@ describe("PaperHandBitchTax", () => {
 
       expect(positionAfter.totalTokens.toNumber()).to.equal(0);
       expect(positionAfter.totalSol.toNumber()).to.equal(0);
-      
+
       // Treasury should have received tax
       expect(taxCollected).to.be.greaterThan(0);
     });
@@ -493,7 +493,7 @@ describe("PaperHandBitchTax", () => {
 
       // Sell a portion
       const sellAmount = positionBefore.totalTokens.div(new BN(2));
-      
+
       const tx = new Transaction()
         .add(
           ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }),
@@ -536,7 +536,7 @@ describe("PaperHandBitchTax", () => {
   describe("Edge cases", () => {
     it("Should fail: Sell without position (new user)", async () => {
       const newUser = Keypair.generate();
-      
+
       // Airdrop to new user
       const sig = await connection.requestAirdrop(newUser.publicKey, 1 * LAMPORTS_PER_SOL);
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -544,7 +544,7 @@ describe("PaperHandBitchTax", () => {
 
       // Create token account
       const newUserTokenAta = (await getOrCreateAssociatedTokenAccount(connection, newUser, mint1, newUser.publicKey)).address;
-      
+
       // Mint some tokens to new user (simulating external purchase)
       await mintTo(connection, admin, mint1, newUserTokenAta, admin.publicKey, 1_000_000_000n);
 
@@ -578,7 +578,7 @@ describe("PaperHandBitchTax", () => {
         tx.feePayer = newUser.publicKey;
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         await sendAndConfirmTransaction(connection, tx, [newUser], { skipPreflight: true });
-        
+
         // Should not reach here
         expect.fail("Should have thrown InsufficientPosition error");
       } catch (error: any) {
@@ -622,7 +622,7 @@ describe("PaperHandBitchTax", () => {
         tx.feePayer = user2.publicKey;
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         await sendAndConfirmTransaction(connection, tx, [user2], { skipPreflight: true });
-        
+
         expect.fail("Should have thrown InsufficientPosition error");
       } catch (error: any) {
         console.log("Expected error for selling more than position:", error.message);
@@ -632,7 +632,7 @@ describe("PaperHandBitchTax", () => {
 
     it("Partial sells maintain correct basis", async () => {
       const newUser = Keypair.generate();
-      
+
       // Airdrop
       const sig = await connection.requestAirdrop(newUser.publicKey, 2 * LAMPORTS_PER_SOL);
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -748,10 +748,10 @@ describe("PaperHandBitchTax", () => {
       // Should have ~half tokens and ~half SOL cost basis remaining
       const expectedRemainingTokens = positionAfterBuy2.totalTokens.sub(halfTokens);
       expect(positionAfterSell.totalTokens.toString()).to.equal(expectedRemainingTokens.toString());
-      
+
       // SOL should be proportionally reduced
       expect(positionAfterSell.totalSol.toNumber()).to.be.approximately(
-        0.25 * LAMPORTS_PER_SOL, 
+        0.25 * LAMPORTS_PER_SOL,
         0.01 * LAMPORTS_PER_SOL // Allow 0.01 SOL tolerance for rounding
       );
     });

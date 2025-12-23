@@ -1,12 +1,15 @@
 import { PublicKey } from "@solana/web3.js";
-import { 
-  PROGRAM_ID, 
-  CURVE_CONFIG_SEED, 
-  POOL_SEED_PREFIX, 
-  POSITION_SEED, 
+import {
+  PROGRAM_ID,
+  CURVE_CONFIG_SEED,
+  POOL_SEED_PREFIX,
+  POSITION_SEED,
   TREASURY_VAULT_SEED,
-  GLOBAL_SEED 
+  GLOBAL_SEED
 } from "./constants";
+
+// Metaplex Token Metadata Program ID
+export const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
 /**
  * Derive the CurveConfiguration PDA
@@ -59,6 +62,30 @@ export function getGlobalPDA(): [PublicKey, number] {
 }
 
 /**
+ * Derive the Mint PDA for a new token launch (based on symbol)
+ */
+export function getMintPDA(symbol: string): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("mint"), Buffer.from(symbol)],
+    PROGRAM_ID
+  );
+}
+
+/**
+ * Derive the Metaplex Metadata PDA for a given mint
+ */
+export function getMetadataPDA(mint: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+      mint.toBuffer(),
+    ],
+    TOKEN_METADATA_PROGRAM_ID
+  );
+}
+
+/**
  * Get all PDAs for a given mint
  */
 export function getAllPDAs(mint: PublicKey) {
@@ -66,6 +93,7 @@ export function getAllPDAs(mint: PublicKey) {
   const [pool, poolBump] = getPoolPDA(mint);
   const [treasuryVault, treasuryBump] = getTreasuryVaultPDA();
   const [global, globalBump] = getGlobalPDA();
+  const [metadata, metadataBump] = getMetadataPDA(mint);
 
   return {
     curveConfig,
@@ -76,10 +104,43 @@ export function getAllPDAs(mint: PublicKey) {
     treasuryBump,
     global,
     globalBump,
+    metadata,
+    metadataBump,
   };
 }
 
+/**
+ * Get all PDAs for launching a new token (uses symbol to derive mint)
+ */
+export function getLaunchPDAs(symbol: string, creator: PublicKey) {
+  const [mint, mintBump] = getMintPDA(symbol);
+  const [curveConfig, curveConfigBump] = getCurveConfigPDA();
+  const [pool, poolBump] = getPoolPDA(mint);
+  const [treasuryVault, treasuryBump] = getTreasuryVaultPDA();
+  const [global, globalBump] = getGlobalPDA();
+  const [metadata, metadataBump] = getMetadataPDA(mint);
 
+  // Liquidity provider PDA for creator
+  const [liquidityProvider, lpBump] = PublicKey.findProgramAddressSync(
+    [Buffer.from("LiqudityProvider"), pool.toBuffer(), creator.toBuffer()],
+    PROGRAM_ID
+  );
 
-
+  return {
+    mint,
+    mintBump,
+    curveConfig,
+    curveConfigBump,
+    pool,
+    poolBump,
+    treasuryVault,
+    treasuryBump,
+    global,
+    globalBump,
+    metadata,
+    metadataBump,
+    liquidityProvider,
+    lpBump,
+  };
+}
 
