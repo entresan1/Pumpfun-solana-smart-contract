@@ -85,4 +85,12 @@ pub mod pump {
     ) -> Result<()> {
         instructions::launch(ctx, name, symbol, uri, decimals, initial_supply, initial_sol_reserve)
     }
+
+    pub fn update_configuration(
+        ctx: Context<UpdateCurveConfiguration>,
+        new_treasury: Pubkey,
+        new_fees: Option<f64>,
+    ) -> Result<()> {
+        instructions::update_configuration(ctx, new_treasury, new_fees)
+    }
 }

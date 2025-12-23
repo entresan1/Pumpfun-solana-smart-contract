@@ -24,13 +24,7 @@ pub fn initialize(
         ctx.accounts.system_program.to_account_info()
     );
 
-    // Initialize treasury vault with some lamports for rent exemption
-    let _ = transfer_sol_to_pool(
-        ctx.accounts.admin.to_account_info(),
-        ctx.accounts.treasury_vault.to_account_info(),
-        10000000,
-        ctx.accounts.system_program.to_account_info()
-    );
+
 
     dex_config.set_inner(CurveConfiguration::new(
         fees,
@@ -60,12 +54,8 @@ pub struct InitializeCurveConfiguration<'info> {
     )]
     pub global_account: AccountInfo<'info>,
 
-    /// CHECK: Treasury vault PDA that will receive paperhand taxes
-    #[account(
-        mut,
-        seeds = [CurveConfiguration::TREASURY_VAULT_SEED.as_bytes()],
-        bump,
-    )]
+    /// CHECK: Treasury vault that will receive paperhand taxes
+    #[account(mut)]
     pub treasury_vault: AccountInfo<'info>,
 
     #[account(mut)]

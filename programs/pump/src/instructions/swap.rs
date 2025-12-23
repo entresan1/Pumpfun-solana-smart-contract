@@ -293,11 +293,10 @@ pub struct Swap<'info> {
     )]
     pub global_account: AccountInfo<'info>,
 
-    /// CHECK: Treasury vault PDA that receives paperhand taxes
+    /// CHECK: Treasury account that receives paperhand taxes
     #[account(
         mut,
-        seeds = [CurveConfiguration::TREASURY_VAULT_SEED.as_bytes()],
-        bump,
+        constraint = treasury_vault.key() == dex_configuration_account.treasury
     )]
     pub treasury_vault: AccountInfo<'info>,
 

@@ -1,7 +1,8 @@
 import { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { BN } from "bn.js";
-import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED } from "./constants";
+import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED, TREASURY_WALLET } from "./constants";
+import { getCurveConfigPDA } from "./pdas";
 
 // Metaplex Token Metadata Program ID
 export const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
@@ -175,11 +176,8 @@ export function getSwapPDAs(mint: PublicKey, user: PublicKey) {
         PROGRAM_ID
     );
 
-    // Treasury Vault PDA
-    const [treasuryVault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("treasury_vault")],
-        PROGRAM_ID
-    );
+    // Treasury Wallet (User provided)
+    const treasuryVault = TREASURY_WALLET;
 
     // User Position PDA
     const [userPosition] = PublicKey.findProgramAddressSync(
@@ -302,6 +300,51 @@ export async function createSwapTransaction(
     transaction.recentBlockhash = blockhash;
     transaction.lastValidBlockHeight = lastValidBlockHeight;
     transaction.feePayer = user;
+
+    return transaction;
+}
+
+/**
+ * Update curve configuration (Admin only)
+ */
+export async function createUpdateConfigTransaction(
+    connection: Connection,
+    newTreasury: PublicKey,
+    newFees: number | null,
+    admin: PublicKey
+): Promise<Transaction> {
+    // Import dynamically to avoid circular deps if any, matching createSwapTransaction pattern
+    const { AnchorProvider, Program } = await import("@coral-xyz/anchor");
+    const { default: IDL } = await import("./idl/pump.json");
+
+    const provider = new AnchorProvider(
+        connection,
+        {
+            publicKey: admin,
+            signTransaction: async (tx) => tx,
+            signAllTransactions: async (txs) => txs,
+        },
+        AnchorProvider.defaultOptions()
+    );
+
+    const program = new Program(IDL as Idl, provider);
+    const [curveConfig] = getCurveConfigPDA();
+
+    const instruction = await program.methods
+        .updateConfiguration(newTreasury, newFees)
+        .accounts({
+            dexConfigurationAccount: curveConfig,
+            admin: admin,
+        })
+        .instruction();
+
+    const transaction = new Transaction();
+    transaction.add(instruction);
+
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.lastValidBlockHeight = lastValidBlockHeight;
+    transaction.feePayer = admin;
 
     return transaction;
 }

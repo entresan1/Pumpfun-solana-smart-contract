@@ -10,5 +10,7 @@ pub use initialize::*;
 pub use launch::*;
 pub use remove_liquidity::*;
 pub use swap::*;
+pub mod update_config;
+pub use update_config::*;
 // pub use create_raydium_pool::*;
 

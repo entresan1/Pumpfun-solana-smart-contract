@@ -6,7 +6,8 @@ import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js"
 import { getAssociatedTokenAddressSync } from "@solana/spl-token"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getPoolPDA, getTreasuryVaultPDA, getGlobalPDA } from "@/lib/pdas"
+import { getPoolPDA, getGlobalPDA } from "@/lib/pdas"
+import { TREASURY_WALLET } from "@/lib/constants"
 import { RefreshCw, ExternalLink, ArrowUpRight, ArrowDownRight, Skull } from "lucide-react"
 
 interface Trade {
@@ -33,7 +34,7 @@ export function TradesTable({ mint }: TradesTableProps) {
         setIsLoading(true)
         try {
             const [poolPDA] = getPoolPDA(mint)
-            const [treasuryVault] = getTreasuryVaultPDA()
+            const treasuryVault = TREASURY_WALLET
 
             // Get recent signatures for the pool
             const signatures = await connection.getSignaturesForAddress(poolPDA, { limit: 20 })

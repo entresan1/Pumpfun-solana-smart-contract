@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { readFileSync } from "fs";
-import { PROGRAM_ID, CURVE_CONFIG_SEED, GLOBAL_SEED, TREASURY_VAULT_SEED } from "../app/src/lib/constants";
+import { PROGRAM_ID, CURVE_CONFIG_SEED } from "../app/src/lib/constants";
 
 async function main() {
     // Load the provider explicitly to avoid env var issues
@@ -22,48 +22,34 @@ async function main() {
     console.log("Program ID:", program.programId.toBase58());
     console.log("Admin:", provider.wallet.publicKey.toBase58());
 
-    // Derive PDAs
+    // Derive Dex Config PDA
     const [dexConfigPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from(CURVE_CONFIG_SEED)],
-        program.programId
-    );
-
-    const [globalPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(GLOBAL_SEED)],
         program.programId
     );
 
     // Treasury Wallet (User provided)
     const treasuryWallet = new PublicKey("Gi2GLxRgXgtd6pyb378AhA4hcBEjbP6aNFWCfFgaAGoS");
 
-    console.log("Initializing contract...");
+    console.log("Updating contract configuration...");
     console.log("Dex Config PDA:", dexConfigPDA.toBase58());
-    console.log("Global PDA:", globalPDA.toBase58());
-    console.log("Treasury Wallet:", treasuryWallet.toBase58());
+    console.log("New Treasury Wallet:", treasuryWallet.toBase58());
 
     try {
         const tx = await program.methods
-            .initialize(
-                1.0, // 1% fee
-                5000 // 50% paperhand tax
+            .updateConfiguration(
+                treasuryWallet,
+                null // Keep fees as is
             )
             .accounts({
                 dexConfigurationAccount: dexConfigPDA,
-                globalAccount: globalPDA,
-                treasuryVault: treasuryWallet,
                 admin: provider.wallet.publicKey,
-                systemProgram: anchor.web3.SystemProgram.programId,
-                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             } as any)
             .rpc();
 
-        console.log("Success! Initialization transaction:", tx);
+        console.log("Success! Configuration updated. Transaction:", tx);
     } catch (err) {
-        if (err.message.includes("already in use")) {
-            console.log("Contract already initialized.");
-        } else {
-            console.error("Initialization failed:", err);
-        }
+        console.error("Update failed:", err);
     }
 }
 

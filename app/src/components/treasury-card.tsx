@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Copy, Check, ExternalLink, Vault, Percent, Shield, RefreshCw } from "lucide-react"
 import { formatLamportsToSol, formatPercentage, shortenPubkey } from "@/lib/format"
-import { getCurveConfigPDA, getTreasuryVaultPDA } from "@/lib/pdas"
+import { getCurveConfigPDA } from "@/lib/pdas"
 import { fetchCurveConfig, CurveConfiguration } from "@/lib/solana"
-import { PROGRAM_ID, DEFAULT_PAPERHAND_TAX_BPS } from "@/lib/constants"
+import { PROGRAM_ID, DEFAULT_PAPERHAND_TAX_BPS, TREASURY_WALLET } from "@/lib/constants"
 
 interface TreasuryCardProps {
   className?: string
@@ -27,13 +27,13 @@ export function TreasuryCard({ className }: TreasuryCardProps) {
     setIsLoading(true)
     try {
       const [configPDA] = getCurveConfigPDA()
-      const [treasuryVaultPDA] = getTreasuryVaultPDA()
+      const treasuryWallet = TREASURY_WALLET
 
-      setTreasuryVaultAddress(treasuryVaultPDA.toBase58())
+      setTreasuryVaultAddress(treasuryWallet.toBase58())
 
       const [configData, balance] = await Promise.all([
         fetchCurveConfig(connection, configPDA),
-        connection.getBalance(treasuryVaultPDA).catch(() => 0)
+        connection.getBalance(treasuryWallet).catch(() => 0)
       ])
 
       setConfig(configData)

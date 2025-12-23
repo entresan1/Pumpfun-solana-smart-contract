@@ -188,7 +188,7 @@ export function ExploreSection() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {isLoading && coins.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
                     <RefreshCw className="w-6 h-6 text-[#5F6A6E] animate-spin" />
                 </div>
@@ -209,7 +209,7 @@ export function ExploreSection() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${isLoading ? 'opacity-80' : ''}`}>
                     {coins.map((coin) => (
                         <Link
                             key={coin.pool.toBase58()}
