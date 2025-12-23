@@ -6,9 +6,12 @@ import { PositionCard } from "@/components/position-card"
 import { TreasuryCard } from "@/components/treasury-card"
 import { TokenCard } from "@/components/token-card"
 import { TradesTable } from "@/components/trades-table"
+import { TokenChart } from "@/components/token-chart"
+import { WalletDistribution } from "@/components/wallet-distribution"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PublicKey } from "@solana/web3.js"
 import Link from "next/link"
+import { useTokenPageData } from "@/hooks/use-token-page-data"
 
 export default function TokenPage({ params }: { params: Promise<{ mint: string }> }) {
     const { mint: mintStr } = use(params)
@@ -28,8 +31,12 @@ export default function TokenPage({ params }: { params: Promise<{ mint: string }
         )
     }
 
+    // Centralized data fetching - all RPC calls happen here
+    const { metadata, trades, holdings, isLoading, refetch } = useTokenPageData(mint)
+
     const handleTradeComplete = () => {
         setRefreshKey(prev => prev + 1)
+        refetch()
     }
 
     return (
@@ -48,7 +55,7 @@ export default function TokenPage({ params }: { params: Promise<{ mint: string }
 
                         {/* Left column - Token Info & Trade */}
                         <div className="flex flex-col gap-6 h-full">
-                            <TokenCard mint={mint} />
+                            <TokenCard mint={mint} metadata={metadata} isLoading={isLoading} />
                             <TradePanel
                                 mint={mint}
                                 onTradeComplete={handleTradeComplete}
@@ -63,9 +70,27 @@ export default function TokenPage({ params }: { params: Promise<{ mint: string }
                         </div>
                     </div>
 
+                    {/* Price Chart - Full width */}
+                    <div className="mt-8">
+                        <TokenChart
+                            trades={trades}
+                            isLoading={isLoading}
+                            onRefresh={refetch}
+                        />
+                    </div>
+
                     {/* Trades Section - Full width below columns */}
                     <div className="mt-8">
-                        <TradesTable key={`trades-${refreshKey}`} mint={mint} />
+                        <TradesTable mint={mint} trades={trades} isLoading={isLoading} onRefresh={refetch} />
+                    </div>
+
+                    {/* Wallet Distribution - Full width */}
+                    <div className="mt-8">
+                        <WalletDistribution
+                            holdings={holdings}
+                            isLoading={isLoading}
+                            onRefresh={refetch}
+                        />
                     </div>
                 </div>
             </div>

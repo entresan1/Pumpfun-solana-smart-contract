@@ -10,14 +10,14 @@ skip-lint = false
 pump = "8XQAVjtT1QSYgVp8WzhVdwuSvGfDX9UifZupiLvBe2Lh"
 
 [programs.mainnet]
-pump = "8XQAVjtT1QSYgVp8WzhVdwuSvGfDX9UifZupiLvBe2Lh"
+pump = "J3pvSaDxrBDX38nBG4CcTodGmkaFuRabVW6Erp712GF2"
 
 [registry]
-url = "https://api.devnet.solana.com"
+url = "https://api.mainnet-beta.solana.com"
 
 [provider]
-cluster = "devnet"
-wallet = "./id.json"
+cluster = "mainnet"
+wallet = "./mainnet-wallet.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

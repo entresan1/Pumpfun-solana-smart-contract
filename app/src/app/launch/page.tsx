@@ -9,12 +9,11 @@ import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
     getAssociatedTokenAddressSync
 } from "@solana/spl-token"
-import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED, LAMPORTS_PER_SOL } from "@/lib/constants"
+import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED, LAMPORTS_PER_SOL, TOKEN_METADATA_PROGRAM_ID } from "@/lib/constants"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import Link from "next/link"
 
-// Metaplex Token Metadata Program ID
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+
 
 export default function LaunchPage() {
     const { connection } = useConnection()

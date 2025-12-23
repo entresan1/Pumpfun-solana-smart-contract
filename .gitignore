@@ -1,3 +1,6 @@
+# Wallets (private keys)
+mainnet-wallet.json
+id.json
 
 .anchor
 .DS_Store

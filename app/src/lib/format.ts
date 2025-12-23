@@ -90,7 +90,33 @@ export function formatRelativeTime(timestamp: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+/**
+ * Get Solscan base URL for current network
+ */
+export function getSolscanCluster(): string {
+  // Import dynamically to avoid circular dependencies
+  const network = process.env.NEXT_PUBLIC_NETWORK || "mainnet-beta";
+  return network === "mainnet-beta" ? "" : "?cluster=devnet";
+}
 
+/**
+ * Get Solscan URL for a transaction
+ */
+export function getSolscanTxUrl(signature: string): string {
+  return `https://solscan.io/tx/${signature}${getSolscanCluster()}`;
+}
 
+/**
+ * Get Solscan URL for an account/wallet
+ */
+export function getSolscanAccountUrl(address: string): string {
+  return `https://solscan.io/account/${address}${getSolscanCluster()}`;
+}
 
+/**
+ * Get Solscan URL for a token
+ */
+export function getSolscanTokenUrl(mint: string): string {
+  return `https://solscan.io/token/${mint}${getSolscanCluster()}`;
+}
 

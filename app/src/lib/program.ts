@@ -1,11 +1,10 @@
 import { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { BN } from "bn.js";
-import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED, TREASURY_WALLET } from "./constants";
+import { PROGRAM_ID, CURVE_CONFIG_SEED, POOL_SEED_PREFIX, GLOBAL_SEED, TREASURY_WALLET, TOKEN_METADATA_PROGRAM_ID } from "./constants";
 import { getCurveConfigPDA } from "./pdas";
 
-// Metaplex Token Metadata Program ID
-export const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+// Metaplex Token Metadata Program ID - imported from constants
 
 // Instruction discriminators (first 8 bytes of sha256 hash of "global:launch")
 const LAUNCH_DISCRIMINATOR = Buffer.from([153, 241, 93, 225, 22, 69, 74, 61]);

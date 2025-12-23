@@ -5,13 +5,12 @@ import { useConnection } from "@solana/wallet-adapter-react"
 import { PublicKey } from "@solana/web3.js"
 import { Card, CardContent } from "@/components/ui/card"
 import { RefreshCw, Rocket, ExternalLink } from "lucide-react"
-import { PROGRAM_ID, POOL_SEED_PREFIX } from "@/lib/constants"
+import { PROGRAM_ID, POOL_SEED_PREFIX, TOKEN_METADATA_PROGRAM_ID } from "@/lib/constants"
 import { formatLamportsToSol } from "@/lib/format"
 import Link from "next/link"
 import { BN } from "bn.js"
 
-// Metaplex Token Metadata Program ID
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+
 
 interface LaunchedCoin {
     mint: PublicKey

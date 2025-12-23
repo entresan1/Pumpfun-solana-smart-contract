@@ -5,11 +5,11 @@ import {
   POOL_SEED_PREFIX,
   POSITION_SEED,
   TREASURY_VAULT_SEED,
-  GLOBAL_SEED
+  GLOBAL_SEED,
+  TOKEN_METADATA_PROGRAM_ID
 } from "./constants";
 
-// Metaplex Token Metadata Program ID
-export const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+// Metaplex Token Metadata Program ID - imported from constants
 
 /**
  * Derive the CurveConfiguration PDA

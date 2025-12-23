@@ -5,7 +5,7 @@ import { useConnection } from "@solana/wallet-adapter-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Copy, Check, ExternalLink, Vault, Percent, Shield, RefreshCw } from "lucide-react"
-import { formatLamportsToSol, formatPercentage, shortenPubkey } from "@/lib/format"
+import { formatLamportsToSol, formatPercentage, shortenPubkey, getSolscanAccountUrl } from "@/lib/format"
 import { getCurveConfigPDA } from "@/lib/pdas"
 import { fetchCurveConfig, CurveConfiguration } from "@/lib/solana"
 import { PROGRAM_ID, DEFAULT_PAPERHAND_TAX_BPS, TREASURY_WALLET } from "@/lib/constants"
@@ -130,7 +130,7 @@ export function TreasuryCard({ className }: TreasuryCardProps) {
                 className="shrink-0 h-9 w-9"
                 asChild
               >
-                <a href={`https://solscan.io/account/${treasuryVaultAddress}?cluster=devnet`} target="_blank" rel="noopener noreferrer">
+                <a href={getSolscanAccountUrl(treasuryVaultAddress)} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 text-[#5F6A6E]" />
                 </a>
               </Button>
@@ -162,7 +162,7 @@ export function TreasuryCard({ className }: TreasuryCardProps) {
                 className="shrink-0 h-9 w-9"
                 asChild
               >
-                <a href={`https://solscan.io/account/${PROGRAM_ID.toBase58()}?cluster=devnet`} target="_blank" rel="noopener noreferrer">
+                <a href={getSolscanAccountUrl(PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 text-[#5F6A6E]" />
                 </a>
               </Button>
